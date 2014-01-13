@@ -26,7 +26,17 @@ TEMPLATE_DEBUG = True
 
 ALLOWED_HOSTS = []
 
+STATUS = (   ('W','NOT YET STARTED'),\
+                 ('A', 'ACTIVE'),\
+                 ('C', 'COMPLETED'),\
+                 ('R','ARCHIEVED'),\
+                );
 
+
+CATEGORY = ( ('H', 'Home'),\
+                 ('F', 'Office'),\
+                 ('O','Others'),\
+                );
 # Application definition
 
 INSTALLED_APPS = (
@@ -36,6 +46,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'todo',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -87,3 +98,77 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.6/howto/static-files/
 
 STATIC_URL = '/static/'
+
+LOG_FILE_NAME =         "chokha_dev.log"
+ACCESS_LOG_FILE_NAME =  "access.log"
+LOG_LEVEL =             "INFO"
+LOG_SIZE =              "16777216"
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(name)s %(module)s: %(message)s'
+        },
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse'
+        }
+    },
+    'handlers': {
+        'null': {
+            'level':LOG_LEVEL,
+            'class':'django.utils.log.NullHandler',
+        },
+        'console':{
+            'level': LOG_LEVEL,
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+        'log_file':{
+            'level': LOG_LEVEL,
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_FILE_NAME,
+            'maxBytes': LOG_SIZE, 
+            'formatter': 'verbose'
+        },
+        'access_file':{
+            'level': LOG_LEVEL,
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': ACCESS_LOG_FILE_NAME,
+            'maxBytes': LOG_SIZE, 
+            'formatter': 'verbose'
+        }
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['log_file'],
+            'level': LOG_LEVEL,
+            'propagate': True,
+        },
+        'okd': {
+            'handlers': ['log_file'],
+            'level': LOG_LEVEL,
+            'propagate': True,
+        },
+        'gunicorn.error': {
+            'level': 'INFO',
+            'handlers': ['access_file'],
+            'propagate': True,
+        },
+        'gunicorn.access': {
+            'level': 'INFO',
+            'handlers': ['access_file'],
+            'propagate': False,
+            },
+        },
+    'root': {
+        'handlers': ['log_file'],
+        'level': LOG_LEVEL
+    },
+}

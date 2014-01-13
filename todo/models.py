@@ -2,12 +2,21 @@ from django.db import models
 import uuid
 
 import pytz
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import traceback
 
+from task import settings
+import logging
 
+logger = logging.getLogger('todo')
 
+CATEGORY_REVERSE = dict((x, y) for x, y in settings.CATEGORY)
+
+STATUS_CHOICES_REVERSE_DICT = dict((x, y) for x, y in settings.STATUS)
+
+class SysUserManager(models.Manager):
+    pass
 
 class SysUser(models.Model):
 
@@ -16,6 +25,72 @@ class SysUser(models.Model):
     email_id = models.CharField(max_length = 150)
     
     is_active = models.BooleanField(default=True)
+
+    objects = SysUserManager()
+
+
+class ItemManager(models.Manager):
+
+    def create_item(self,user,title, category,priority):
+        try:
+            itemObj = Item(id = uuid.uuid4().hex ,\
+                title = title ,\
+                start_time = datetime.now(pytz.utc) ,\
+                due_time = datetime.now(pytz.utc) + timedelta(days = 5) ,\
+                creator = user ,\
+                category = category ,\
+                priority = priority ,\
+                    )
+            itemObj.save()
+            return itemObj
+        except:
+            logger.error("error %s " %str(traceback.format_exc()))
+            return None
+
+
+    
+    def get_all_active_items(self,user):
+
+        try:
+            item_list = Item.objects.filter(creator = user)
+            items = []
+            for item in item_list:
+                item_dict = {}
+                item_dict['title'] = item.title
+                item_dict['date_created'] = item.date_created.strftime("%Y-%m-%dT%H:%M:%SZ")
+                item_dict['start_time'] = item.start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+                item_dict['due_time'] = item.due_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+                item_dict['status'] = STATUS_CHOICES_REVERSE_DICT.get(item.status)
+                item_dict['category'] = CATEGORY_REVERSE.get(item.category)
+                item_dict['priority'] = item.priority
+                items.append(item_dict)
+
+
+
+
+            return items
+        except:
+            logger.error("error in getting active items %s" %str(traceback.format_exc()))
+            return None
+
+    def set_item_as_done(self,item_id):
+        try:
+            item = Item.object.filter(id  = item_id).update(status = 'C', complete_time = datetime.now(pytz.utc))
+            return True
+        except:
+            logger.error(" error item_id %s" %str(item_id))
+            return False
+
+    def get_all_completed_itmes(self,user):
+
+        try:
+            item_list = Item.objects.filter(creator = user, status = 'C')
+            return item_list
+        except:
+            logger.error("error in getting active items %s" %str(traceback.format_exc()))
+            return None
+
+
 
 
 class Item(models.Model):
@@ -39,7 +114,7 @@ class Item(models.Model):
                  ('C', 'COMPLETED'),\
                  ('R','ARCHIEVED'),\
                 );
-    status = models.CharField(max_length = 1,default = 'W',choices = STATUS)
+    status = models.CharField(max_length = 1,default = 'A',choices = STATUS)
 
 
     CATEGORY = ( ('H', 'Home'),\
@@ -61,52 +136,6 @@ class Item(models.Model):
     def __unicode__(self):
         return self.title 
 
-
-class ItemManager(models.Manager):
-
-    def create_item(self,user,title, start_time, due_time, creator,category,priority):
-        try:
-            itemObj = Item(id = uuid.uuid4().hex ,\
-                title = title ,\
-                start_time = start_time ,\
-                due_time = due_time ,\
-                creator = user ,\
-                category = category ,\
-                priority = priority ,\
-                    )
-            itemObj.save()
-            return itemObj
-        except:
-            logger.error("error %s " %str(traceback.format_exc()))
-            return None
-
-
-    
-    def get_all_active_items(self,user):
-
-        try:
-            item_list = Item.objects.filter(creator = user, status = 'A')
-            return item_list
-        except:
-            logger.error("error in getting active items %s" %str(traceback.format_exc()))
-            return None
-
-    def set_item_as_done(self,item_id):
-        try:
-            item = Item.object.filter(id  = item_id).update(status = 'C', complete_time = datetime.now(pytz.utc))
-            return True
-        except:
-            logger.error(" error item_id %s" %str(item_id))
-            return False
-
-    def get_all_completed_itmes(self,user):
-
-        try:
-            item_list = Item.objects.filter(creator = user, status = 'C')
-            return item_list
-        except:
-            logger.error("error in getting active items %s" %str(traceback.format_exc()))
-            return None
 
 
 
